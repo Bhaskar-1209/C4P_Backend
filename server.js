@@ -8,7 +8,7 @@ const path = require("path");
 dotenv.config();
 
 const userRoutes = require("./routes/userRoutes");
-const projectRoutes = require("./routes/projetRoutes"); // ✅ double-check filename
+const projectRoutes = require("./routes/ProjetRoutes"); // ✅ double-check filename
 
 const app = express();
 
