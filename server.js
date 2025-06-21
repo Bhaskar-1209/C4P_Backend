@@ -8,7 +8,7 @@ const path = require("path");
 dotenv.config();
 
 const userRoutes = require("./routes/userRoutes");
-const projectRoutes = require("./routes/projectRoutes"); // ✅ ensure correct file name!
+const projectRoutes = require("./routes/ProjectRoutes"); // ✅ ensure correct file name!
 
 const app = express();
 
@@ -20,7 +20,7 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 // Test route (helps Render detect the running server)
 app.get("/", (req, res) => {
   res.send("🚀 API running successfully.");
-});
+});cswcerc
 
 // Routes
 app.use("/api/users", userRoutes);
