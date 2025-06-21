@@ -8,7 +8,7 @@ const path = require("path");
 dotenv.config();
 
 const userRoutes = require("./routes/userRoutes");
-const projectRoutes = require("./routes/ProjetRoutes"); // ✅ ensure correct file name!
+const projectRoutes = require("./routes/projetRoutes"); // ✅ double-check filename
 
 const app = express();
 
@@ -17,16 +17,16 @@ app.use(cors());
 app.use(express.json());
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-// Test route (helps Render detect the running server)
+// Health check route
 app.get("/", (req, res) => {
   res.send("🚀 API running successfully.");
-});cswcerc
+});
 
 // Routes
 app.use("/api/users", userRoutes);
 app.use("/api/projects", projectRoutes);
 
-// Connect MongoDB and start server
+// MongoDB and server start
 mongoose
   .connect(process.env.MONGO_URI, {
     useNewUrlParser: true,
@@ -35,7 +35,6 @@ mongoose
   .then(() => {
     console.log("✅ MongoDB connected");
 
-    // ✅ Important: use process.env.PORT
     const PORT = process.env.PORT || 5050;
     app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
