@@ -4,39 +4,43 @@ const cors = require("cors");
 const dotenv = require("dotenv");
 const path = require("path");
 
-// Load environment variables
+// Load env vars
 dotenv.config();
 
 const userRoutes = require("./routes/userRoutes");
-const projectRoutes = require("./routes/ProjetRoutes"); // Make sure this file name is correct
+const projectRoutes = require("./routes/projectRoutes"); // ✅ ensure correct file name!
 
 const app = express();
 
 // Middleware
 app.use(cors());
 app.use(express.json());
-
-// Serve static files (e.g., uploaded images/files)
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-// API routes
+// Test route (helps Render detect the running server)
+app.get("/", (req, res) => {
+  res.send("🚀 API running successfully.");
+});
+
+// Routes
 app.use("/api/users", userRoutes);
 app.use("/api/projects", projectRoutes);
 
-// MongoDB connection
-mongoose.connect(process.env.MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
-.then(() => {
-  console.log("✅ MongoDB connected");
+// Connect MongoDB and start server
+mongoose
+  .connect(process.env.MONGO_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  })
+  .then(() => {
+    console.log("✅ MongoDB connected");
 
-  // Use PORT from environment or fallback to 5000 for local development
-  const PORT = process.env.PORT || 5050;
-  app.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
+    // ✅ Important: use process.env.PORT
+    const PORT = process.env.PORT || 5050;
+    app.listen(PORT, () => {
+      console.log(`🚀 Server running on port ${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error("❌ MongoDB connection error:", err);
   });
-})
-.catch((err) => {
-  console.error("❌ MongoDB connection error:", err);
-});
