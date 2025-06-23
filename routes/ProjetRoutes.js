@@ -1,23 +1,30 @@
 const express = require("express");
 const router = express.Router();
 const multer = require("multer");
-const path = require("path");
-const fs = require("fs");
+const streamifier = require("streamifier");
 const Project = require("../models/Project");
 const authenticateUser = require("../middleware/auth");
+const cloudinary = require("../utils/cloudinary");
 
-const uploadDir = "uploads";
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir);
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, "uploads/"),
-  filename: (req, file, cb) => {
-    const uniqueName = Date.now() + "-" + Math.round(Math.random() * 1e9) + path.extname(file.originalname);
-    cb(null, uniqueName);
-  },
-});
+// Use memory storage for multer
+const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
+// Helper: Upload buffer to Cloudinary
+const uploadToCloudinary = (fileBuffer) => {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      { folder: "project" },
+      (error, result) => {
+        if (result) resolve(result.secure_url);
+        else reject(error);
+      }
+    );
+    streamifier.createReadStream(fileBuffer).pipe(stream);
+  });
+};
+
+// POST /api/projects/upload
 router.post("/upload", authenticateUser, upload.array("images", 2), async (req, res) => {
   try {
     const { title, description, googleFormLink } = req.body;
@@ -31,13 +38,15 @@ router.post("/upload", authenticateUser, upload.array("images", 2), async (req, 
       return res.status(400).json({ message: "All fields and exactly 2 images are required." });
     }
 
-    const imagePaths = req.files.map(file => file.path);
+    // Upload all files to Cloudinary
+    const imageUploadPromises = req.files.map(file => uploadToCloudinary(file.buffer));
+    const uploadedImageUrls = await Promise.all(imageUploadPromises);
 
     const newProject = new Project({
       title,
       description,
       googleFormLink,
-      images: imagePaths,
+      images: uploadedImageUrls,
       contributors,
       uploader: req.user._id,
     });
@@ -50,6 +59,7 @@ router.post("/upload", authenticateUser, upload.array("images", 2), async (req, 
   }
 });
 
+// GET all projects
 router.get("/", async (req, res) => {
   try {
     const projects = await Project.find()
@@ -62,7 +72,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-
+// GET single project by ID
 router.get("/:id", async (req, res) => {
   try {
     const project = await Project.findById(req.params.id)
@@ -75,7 +85,7 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-// DELETE project by ID
+// DELETE project
 router.delete("/:id", authenticateUser, async (req, res) => {
   try {
     const project = await Project.findById(req.params.id);
@@ -84,19 +94,14 @@ router.delete("/:id", authenticateUser, async (req, res) => {
       return res.status(404).json({ message: "Project not found" });
     }
 
-    // Optional: Only allow the uploader or admin to delete
+    // Only uploader or admin can delete
     if (String(project.uploader) !== String(req.user._id) && req.user.role !== "admin") {
       return res.status(403).json({ message: "You are not authorized to delete this project" });
     }
 
-    // Delete image files from filesystem
-    project.images.forEach((imagePath) => {
-      fs.unlink(imagePath, (err) => {
-        if (err) console.error(`Failed to delete file: ${imagePath}`, err);
-      });
-    });
+    // Optional: You could delete Cloudinary images using public_id if stored
+    // For now, we're only deleting the MongoDB record
 
-    // Delete project from database
     await Project.findByIdAndDelete(req.params.id);
 
     res.status(200).json({ message: "Project deleted successfully" });
@@ -105,7 +110,5 @@ router.delete("/:id", authenticateUser, async (req, res) => {
     res.status(500).json({ message: "Failed to delete project", error: err.message });
   }
 });
-
-
 
 module.exports = router;
