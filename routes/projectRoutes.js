@@ -3,7 +3,7 @@ const router = express.Router();
 const Project = require("../models/Project");
 const authenticateUser = require("../middleware/auth");
 
-// Upload project with base64 images
+// ✅ Upload project with base64 images
 router.post("/upload", authenticateUser, async (req, res) => {
   try {
     const { title, description, googleFormLink, contributors, images } = req.body;
@@ -21,7 +21,7 @@ router.post("/upload", authenticateUser, async (req, res) => {
       uploader: req.user.id,
     });
 
-    await project.save(); // 👈 Important line
+    await project.save();
     res.status(201).json({ message: "Upload successful", project });
   } catch (err) {
     console.error("❌ Upload error:", err);
@@ -29,28 +29,33 @@ router.post("/upload", authenticateUser, async (req, res) => {
   }
 });
 
+// ✅ Get all projects (with uploader name and email)
 router.get("/", async (req, res) => {
   try {
-    const projects = await Project.find().sort({ createdAt: -1 }); // newest first
+    const projects = await Project.find()
+      .sort({ createdAt: -1 }) // Optional: recent first
+      .populate("uploader", "name email"); // 👈 Include uploader details
+
     res.status(200).json(projects);
   } catch (err) {
-    res.status(500).json({ message: "Error fetching projects", error: err.message });
+    console.error("❌ Fetch error:", err);
+    res.status(500).json({ message: "Failed to fetch projects", error: err.message });
   }
 });
 
-
-// Get project by ID
+// ✅ Get project by ID (with uploader info)
 router.get("/:id", async (req, res) => {
   try {
     const project = await Project.findById(req.params.id).populate("uploader", "name email");
     if (!project) return res.status(404).json({ message: "Project not found" });
     res.status(200).json(project);
   } catch (err) {
+    console.error("❌ Fetch single project error:", err);
     res.status(500).json({ message: "Error fetching project", error: err.message });
   }
 });
 
-// Delete project by ID
+// ✅ Delete project by ID (only uploader or admin)
 router.delete("/:id", authenticateUser, async (req, res) => {
   try {
     const project = await Project.findById(req.params.id);
@@ -63,7 +68,7 @@ router.delete("/:id", authenticateUser, async (req, res) => {
     await Project.findByIdAndDelete(req.params.id);
     res.status(200).json({ message: "Project deleted successfully" });
   } catch (err) {
-    console.error("Delete error:", err);
+    console.error("❌ Delete error:", err);
     res.status(500).json({ message: "Failed to delete project", error: err.message });
   }
 });

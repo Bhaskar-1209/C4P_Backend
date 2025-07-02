@@ -6,7 +6,7 @@ const auth = require("../middleware/auth");
 
 const router = express.Router();
 
-// Register
+// ✅ Register
 router.post("/register", async (req, res) => {
   try {
     const { name, email, position, role, password } = req.body;
@@ -22,10 +22,10 @@ router.post("/register", async (req, res) => {
   } catch (err) {
     console.error("Register error:", err);
     res.status(500).json({ message: "Server error", error: err.message });
-  }
+  } 
 });
 
-// Login
+// ✅ Login
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -47,7 +47,21 @@ router.post("/login", async (req, res) => {
   }
 });
 
-// Protected profile route
+// ✅ Get current logged-in user info
+router.get("/me", auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id || req.user.id).select("-password");
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    res.json(user);
+  } catch (err) {
+    console.error("Error fetching user:", err);
+    res.status(500).json({ message: "Error fetching user", error: err.message });
+  }
+});
+
+// ✅ Protected profile route
 router.get("/profile", auth, async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select("-password");
@@ -57,7 +71,7 @@ router.get("/profile", auth, async (req, res) => {
   }
 });
 
-// Get all users (Admin)
+// ✅ Get all users (Admin only if needed)
 router.get("/", async (req, res) => {
   try {
     const users = await User.find({}, "-password");
@@ -67,7 +81,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-// Update user role
+// ✅ Update user role
 router.put("/:id/role", async (req, res) => {
   try {
     const { role } = req.body;
@@ -78,7 +92,7 @@ router.put("/:id/role", async (req, res) => {
   }
 });
 
-// Change password (authenticated user)
+// ✅ Change password
 router.put("/change-password", auth, async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
@@ -100,10 +114,9 @@ router.put("/change-password", auth, async (req, res) => {
   }
 });
 
-// Delete user by ID (Admin only)
+// ✅ Delete user by ID (Admin only)
 router.delete("/:id", auth, async (req, res) => {
   try {
-    // Optional: only allow admin users to delete
     if (req.user.role !== "admin") {
       return res.status(403).json({ message: "Access denied. Admins only." });
     }
@@ -120,7 +133,5 @@ router.delete("/:id", auth, async (req, res) => {
     res.status(500).json({ message: "Error deleting user", error: err.message });
   }
 });
-
-  
 
 module.exports = router;
