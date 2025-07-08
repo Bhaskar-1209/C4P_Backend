@@ -3,26 +3,31 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const User = require("../models/UserScheme");
 const auth = require("../middleware/auth");
+const { sendRegistrationEmail } = require("../utils/mailer");
 
 const router = express.Router();
 
 // ✅ Register
+
 router.post("/register", async (req, res) => {
   try {
-    const { name, email, position, role, password } = req.body;
+    const { name, email, position, role, password, regards } = req.body;
 
     const userExists = await User.findOne({ email });
     if (userExists) return res.status(400).json({ message: "Email already registered" });
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const newUser = new User({ name, email, position, role, password: hashedPassword });
-
     await newUser.save();
-    res.status(201).json({ message: "User registered", role: newUser.role });
+
+    // ✅ Send Email with regards
+    await sendRegistrationEmail(email, name, email, password, position, role, regards);
+
+    res.status(201).json({ message: "User registered successfully", role: newUser.role });
   } catch (err) {
-    console.error("Register error:", err);
+    console.error("Registration Error:", err);
     res.status(500).json({ message: "Server error", error: err.message });
-  } 
+  }
 });
 
 // ✅ Login
